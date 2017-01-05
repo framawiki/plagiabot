@@ -11,10 +11,12 @@ import threading
 import sys
 import re
 from datetime import datetime
+
 if sys.version_info[0] > 2:
     from queue import Queue, Empty
 else:
     from Queue import Queue, Empty
+
 
 class IRCRecentChangesBot(IRCBot):
     def __init__(self, site, channel, nickname, server, filter_generator=None):
@@ -23,9 +25,10 @@ class IRCRecentChangesBot(IRCBot):
         self.re_edit_page_diff = re.compile('.+?index\.php\?diff=(?P<new>[0-9]+)&oldid=(?P<old>[0-9]+)')
         self.queue = Queue()
         if filter_generator is None:
-            filter_generator = lambda x : x
-        self.filter_generator  = filter_generator
-        self.last_msg = datetime.now() 
+            filter_generator = lambda x: x
+        self.filter_generator = filter_generator
+        self.last_msg = datetime.now()
+
     def on_pubmsg(self, c, e):
         match = self.re_edit.match(e.arguments()[0])
         if not match:
@@ -45,14 +48,14 @@ class IRCRecentChangesBot(IRCBot):
         if is_new:
             diff_match = self.re_new_page_diff.match(match.group('url'))
             if not diff_match: return
-            diff_revisions = {'new': int(diff_match.group('new')), 'old': 0 }
+            diff_revisions = {'new': int(diff_match.group('new')), 'old': 0}
         else:
             diff_match = self.re_edit_page_diff.match(match.group('url'))
             if not diff_match: return
 
-            diff_revisions = { 'new': int(diff_match.group('new')), 'old': int(diff_match.group('old'))  }
+            diff_revisions = {'new': int(diff_match.group('new')), 'old': int(diff_match.group('old'))}
 
-        diff_data =  {
+        diff_data = {
             'type': 'edit',
             'comment': match.group('summary'),
             'user': match.group('user'),
@@ -71,6 +74,7 @@ class IRCRecentChangesBot(IRCBot):
             # whatever reason the filter fail we can ignore it
             pass
 
+
 class IRCRcBotThread(threading.Thread):
     def __init__(self, site, channel, nickname, server, filter_generator=None):
         super(IRCRcBotThread, self).__init__()
@@ -88,7 +92,7 @@ def irc_rc_listener(site, filter_gen=None):
     channel = '#{}.{}'.format(site.lang, site.family.name)
     server = 'irc.wikimedia.org'
     nickname = site.username()
-    irc_thread =  IRCRcBotThread(site, channel, nickname, server, filter_gen)
+    irc_thread = IRCRcBotThread(site, channel, nickname, server, filter_gen)
     irc_thread.start()
     restarts = 0
     max_restarts = 5
@@ -96,7 +100,7 @@ def irc_rc_listener(site, filter_gen=None):
         try:
             element = irc_thread.irc_bot.queue.get(timeout=0.1)
         except Empty:
-            if (datetime.now()-irc_thread.irc_bot.last_msg).seconds > 60:
+            if (datetime.now() - irc_thread.irc_bot.last_msg).seconds > 60:
                 pywikibot.output('Missing updates for long time. Restarting....')
                 try:
                     irc_thread.stop()
@@ -104,7 +108,7 @@ def irc_rc_listener(site, filter_gen=None):
                     pass
                 if restarts > max_restarts:
                     raise Exception('Too many restarts of IRC listner bot')
-                irc_thread =  IRCRcBotThread(site, channel, nickname, server, filter_gen)
+                irc_thread = IRCRcBotThread(site, channel, nickname, server, filter_gen)
                 irc_thread.start()
                 restarts += 1
 
@@ -114,9 +118,10 @@ def irc_rc_listener(site, filter_gen=None):
         restarts = 0
         yield element
 
+
 def main():
     print('creating site')
-    site= pywikibot.Site('en')
+    site = pywikibot.Site('en')
     print('starting bot')
     for p in irc_rc_listener(site):
         print(p.title())
@@ -124,5 +129,5 @@ def main():
         print('------')
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     main()
