@@ -504,7 +504,7 @@ class PlagiaBot(object):
         while try_save:
             try:
                 try_save = False
-                self.report_page.put(reports, "Update")
+                self.report_page.put(reports, "Bot: Update")
             except pywikibot.SpamfilterError:
                 pywikibot.output('spam filter error')
             except pywikibot.EditConflict:
@@ -719,7 +719,10 @@ def get_page_tags(site, page_name):
 def parse_blacklist(page_name):
     """
     Backlist format: # to end is comment. every line is regex.
+    blacklist_report: page where bad regexes will be added
+    blackilst_report_nb: the number of bad regexes, to prevent spam
     """
+    blackilst_report_nb = 0
     page = pywikibot.Page(pywikibot.Site('meta', 'meta'), page_name)
     try:
         blackList=page.get()
@@ -734,6 +737,15 @@ def parse_blacklist(page_name):
         except Exception as e:
             print('Error for regex:' + ig_site)
             print(e)
+            try:
+                blacklist_report = pywikibot.Page(pywikibot.Site('meta', 'meta'), page_name + '/errors')
+                if not ig_site in blacklist_report.text:
+                    blacklist_report.text = u'\n* ~~~~~ - <tt><nowiki>%s</nowiki></tt> - %s' % (ig_site, e)
+                    if blackilst_report_nb < 3:
+                        blacklist_report.save('Bot: regex error')
+                    blackilst_report_nb += 1
+            except:
+                pass
     return reblacklist
 
 def fill_wikiEd_pages(site):
